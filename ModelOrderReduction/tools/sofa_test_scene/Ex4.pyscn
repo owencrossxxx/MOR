@@ -1,0 +1,100 @@
+import Sofa
+import math
+import os
+
+#import SofaPython.Tools
+
+density = 1.14
+volume = 32.171
+mass = density*volume*1e-3
+
+#print('hi')
+
+def createScene(rootNode):
+
+		#rootNode.createObject('RequiredPlugin', name='SofaOpenglVisual')
+		#rootNode.createObject('RequiredPlugin', name='CImgPlugin')
+		#rootNode.createObject('RequiredPlugin', name='SofaMiscCollision')
+		rootNode.createObject('RequiredPlugin', name='SofaPython')
+		rootNode.createObject('RequiredPlugin', name='SoftRobots')
+		rootNode.createObject('RequiredPlugin', name='SofaSparseSolver')
+		#rootNode.createObject('RequiredPlugin', name='CGALPlugin')
+		rootNode.createObject('RequiredPlugin', name='SofaExporter')
+		#print('hi')
+		#rootNode.createObject('RequiredPlugin', name='ModelOrderReduction' )
+		#rootNode.createObject('RequiredPlugin', pluginName='Registration')
+
+		rootNode.createObject('VisualStyle', displayFlags='showVisualModels showBehaviorModels hideCollisionModels hideBoundingCollisionModels hideForceFields hideInteractionForceFields hideWireframe')
+		rootNode.findData('gravity').value ='0 0 -9810'
+		rootNode.findData('dt').value = '0.01'
+
+		rootNode.createObject('DefaultAnimationLoop')
+		rootNode.createObject('GenericConstraintSolver', tolerance="1e-12", maxIterations="10000")
+		rootNode.createObject('FreeMotionAnimationLoop')
+		#rootNode.createObject('DefaultPipeline', verbose="0")
+		#rootNode.createObject('BruteForceDetection', name="N2")
+		#rootNode.createObject('DefaultContactManager', response="FrictionContact", responseParams="mu=0.7")
+		#rootNode.createObject('LocalMinDistance', name="Proximity", alarmDistance="5", contactDistance="1", angleCone="0.01")
+
+		#rootNode.createObject('BackgroundSetting', color='0 0.168627 0.211765')
+		#rootNode.createObject('OglSceneFrame', style="Arrows", alignment="TopRight")		
+		#rootNode.createObject('PythonScriptController', filename="/home/pasquale/Script_SOFA/pneumatic_fingers/multimaterial_material_finger/MOR-finger/fingerController.py", classname="controller")
+
+		
+		finger = rootNode.createChild("finger")
+
+		finger.createObject('MeshVTKLoader',name ='mesh', rotation=[0.0,0.0,0.0], filename ='/home/owen/Softwares/plugins/ModelOrderReduction/tools/sofa_test_scene/mesh/Ex30.vtu')
+		finger.createObject('EulerImplicitSolver', name ='odesolver', rayleighStiffness ='0.1', rayleighMass='0.1')
+		finger.createObject('SparseLDLSolver', name='preconditioner')
+	
+		
+		#finger.createObject('MechanicalObject', name ='tetras', template ='Vec3d', position = '@mesh.position',showIndices='false', showIndicesScale='4e-5', rx='0', dz='0',tags =='NoPicking')
+		
+		finger.createObject('MechanicalObject', name='tetras', template='Vec3d', showObject='0', showObjectScale='1')
+
+
+		finger.createObject('TetrahedronSetTopologyContainer', src ='@mesh' , name="topo" )
+		finger.createObject('TetrahedronSetTopologyModifier', name = "Modifier")
+		finger.createObject('TetrahedronSetGeometryAlgorithms', name ='TetrageomAlgo', template= 'Vec3d')
+		finger.createObject('TetrahedronSetTopologyAlgorithms', name ='TetratopoAlgo', template= 'Vec3d')
+		finger.createObject('TetrahedronFEMForceField',template='Vec3d', name='FEM', method='large', poissonRatio='0.45',  youngModulus='330.8', drawAsEdges="true")
+		finger.createObject('UniformMass', totalMass= mass)
+		finger.createObject('BoxROI', name='boxROI', box='-5 -5 -10 3 60 60', drawBoxes='true',doUpdate='0')
+
+		finger.createObject('RestShapeSpringsForceField', points='@boxROI.indices', stiffness='1e10',angularStiffness='1e10')
+		finger.createObject('LinearSolverConstraintCorrection', solverName='preconditioner')
+	
+		
+		cavity = finger.createChild('cavity')
+
+		cavity.createObject('MeshSTLLoader',rotation =[0.0,0.0,0.0],translation=[0,0,2.5], filename = '/home/owen/Softwares/plugins/ModelOrderReduction/tools/sofa_test_scene/mesh/Ex3Cav.STL', name ='gridcav')
+		cavity.createObject('TriangleSetTopologyContainer', src='@gridcav', name='cavityMesh')
+		cavity.createObject('MechanicalObject', template= 'Vec3d' , name='cavity')
+		cavity.createObject('TriangleSetTopologyModifier', name = 'Trianglemodifier')
+		cavity.createObject('TriangleSetGeometryAlgorithms', name ='TrianglegeomAlgo', template= 'Vec3d')
+		cavity.createObject('TriangleSetTopologyAlgorithms', name ='TriangletopoAlgo', template= 'Vec3d')
+
+		cavity.createObject('SurfacePressureConstraint', name="SurfacePressureConstraint",listening = 'true' , template='Vec3d', value="0", triangles='@cavityMesh.triangles',drawPressure='0', drawScale='0.0002',valueType="pressure")
+		cavity.createObject('BarycentricMapping', mapForces= 'false', mapMasses='false')
+
+		
+		collisionfinger = finger.createChild('collisionfinger')
+		collisionfinger.createObject('MeshSTLLoader',rotation =[0,0.0,0.0], name='loadercollis', filename='/home/owen/Softwares/plugins/ModelOrderReduction/tools/sofa_test_scene/mesh/Ex3.STL')
+		collisionfinger.createObject('MeshTopology', src='@loadercollis', name='topocollis')
+		collisionfinger.createObject('MechanicalObject', name='collisMech')
+		collisionfinger.createObject('TriangleCollisionModel', selfCollision="false")
+		collisionfinger.createObject('LineCollisionModel',selfCollision="false")
+		collisionfinger.createObject('PointCollisionModel', selfCollision="false")
+		collisionfinger.createObject('BarycentricMapping')
+
+		
+
+    		#modelvisu = finger.createChild('modelvisu')
+    		#modelvisu.createObject('MeshObjLoader',rotation =[180.0,0.0,0.0],  filename="/home/pasquale/Script_SOFA/pneumatic_fingers/multimaterial_material_finger/MOR-finger/BSPA_Red_Outer.obj", name = "visuloader")
+    		#modelvisu.createObject('OglModel', src= '@visuloader', template='Vec3d', color='red')
+    		#modelvisu.createObject('BarycentricMapping')
+
+    	
+
+    	
+		return rootNode

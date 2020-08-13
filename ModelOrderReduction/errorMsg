@@ -1,0 +1,49 @@
+owen@owen-VirtualBox:~/Softwares/plugins/ModelOrderReduction/tools$  env /usr/bin/python /home/owen/.vscode/extensions/ms-python.python-2020.7.96456/pythonFiles/lib/python/debugpy/launcher 38235 -- /home/owen/Softwares/plugins/ModelOrderReduction/tools/modelOrderReduction.py 
+periodSaveGIE : 6 | nbTrainingSet : 150 | nbIterations : 754
+##################################################
+[139750172411648] processing threaded sofa task in: /tmp/sofa-launcher-nUso4j/phase1_snapshots.py
+[139750417057536] processing threaded sofa task in: /tmp/sofa-launcher-Pxgw73/phase1_snapshots.py
+Results: 
+    directory: /tmp/sofa-launcher-nUso4j
+        scene: /tmp/sofa-launcher-nUso4j/phase1_snapshots.py
+     duration: 8.39173698425 sec
+Results: 
+    directory: /tmp/sofa-launcher-Pxgw73
+        scene: /tmp/sofa-launcher-Pxgw73/phase1_snapshots.py
+     duration: 8.27002215385 sec
+PHASE 1 --- 8.4743680954 seconds ---
+###################################################
+Executing readStateFilesAndComputeModes.py
+
+Arguments :
+
+     INPUT  :
+     in stateFilePath         : /home/owen/Softwares/plugins/SoftRobots/docs/tutorials/PneunetGripper/details/output/debug/stateFile.state
+     with arguments           :
+         -tolerance               : 0.001 
+
+     OUTPUT :
+         -modesFileName           : /home/owen/Softwares/plugins/SoftRobots/docs/tutorials/PneunetGripper/details/output/data/modes.txt 
+
+###################################################
+Reading file '/home/owen/Softwares/plugins/SoftRobots/docs/tutorials/PneunetGripper/details/output/debug/stateFile.state':
+    Read 755 line and found 302 snapshot with 1128 of DOF
+Done reading file '/home/owen/Softwares/plugins/SoftRobots/docs/tutorials/PneunetGripper/details/output/debug/stateFile.state': 
+
+Determining number of Modes with a Tolerance of 0.001
+===> Success readStateFilesAndComputeModes.py
+
+3 possible modes with a tolerance of 0.001
+PHASE 2 --- 0.123418807983 seconds ---
+[139751276246784] processing threaded sofa task in: /tmp/sofa-launcher-wCsBcm/phase2_prepareECSW.py
+[139749936535296] processing threaded sofa task in: /tmp/sofa-launcher-_mIX7G/phase2_prepareECSW.py
+Results: 
+    directory: /tmp/sofa-launcher-wCsBcm
+        scene: /tmp/sofa-launcher-wCsBcm/phase2_prepareECSW.py
+     duration: 0.510237932205 sec
+Results: 
+    directory: /tmp/sofa-launcher-_mIX7G
+        scene: /tmp/sofa-launcher-_mIX7G/phase2_prepareECSW.py
+     duration: 0.517602920532 sec
+IOError : there is no /tmp/sofa-launcher-wCsBcm/elmts_finger.txt , check the template log to find why.
+Here some clue for its probable origin :    - Your animation arguments are incorrect and it hasn't find anything to animate

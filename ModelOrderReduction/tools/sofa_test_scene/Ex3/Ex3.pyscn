@@ -1,0 +1,131 @@
+############################################################################
+
+# Soft Robotics Lab, Oxford Uni.
+# Template for simulating pneumatic actuator on Sofa
+
+# Wenye Ouyang (Owen)
+# wenye@robots.ox.ac.uk
+# Last review date: 20/4/2020
+
+############################################################################
+
+import Sofa
+import math
+import os
+#import a floor from soft robot template library
+from stlib.physics.rigid import Floor
+from stlib.scene import MainHeader, ContactHeader
+
+density = 1.14
+volume = 32.171
+mass = density*volume*1e-3
+
+path = os.path.dirname(os.path.abspath(__file__)) 
+
+#Create a scene
+def createScene(rootNode):
+
+
+        #Display options
+        rootNode.createObject('VisualStyle', displayFlags='showVisualModels showBehaviorModels hideCollisionModels hideBoundingCollisionModels showForceFields showInteractionForceFields hideWireframe')
+
+        #load plugins
+        rootNode.createObject('RequiredPlugin', name='SoftRobots', pluginName='SoftRobots')
+        rootNode.createObject('RequiredPlugin', name='SofaPython', pluginName='SofaPython')
+        rootNode.createObject('RequiredPlugin', name='ModelOrderReduction', pluginName='ModelOrderReduction')
+        rootNode.createObject('RequiredPlugin', name='SofaSparseSolver', pluginName='SofaSparseSolver')
+        rootNode.createObject('RequiredPlugin', name='SofaExporter')
+
+        #Define gravity along three axis
+        #rootNode.findData('gravity').value= '-9810 0 0'
+        #rootNode.createObject('PythonScriptController', filename="controller/Controller.py", classname="controller")
+        rootNode.createObject('FreeMotionAnimationLoop')
+        rootNode.createObject('GenericConstraintSolver', tolerance="1e-12", maxIterations="10000")
+
+        MainHeader(rootNode, gravity=[0,0,0.0])
+        ContactHeader(rootNode, alarmDistance=2, contactDistance=1)
+
+        #rootNode.createObject('CollisionPipeline', verbose="0")
+        #rootNode.createObject('BruteForceDetection', name="N2")
+        #rootNode.createObject('CollisionResponse', response="FrictionContact", responseParams="mu=0.6")
+        #rootNode.createObject('LocalMinDistance', name="Proximity", alarmDistance="0.2", contactDistance="0.09", angleCone="0.00")
+
+        #rootNode.createObject('BackgroundSetting', color='0 0.168627 0.211765')
+        #rootNode.createObject('OglSceneFrame', style="Arrows", alignment="TopRight")
+
+        #Load a floor in the scene
+        #Floor(rootNode, translation=[-5,30,30], rotation = [0,0,90] , isAStaticObject=True)
+
+
+        ########
+        ########Link 1
+        #Load the actuator
+        pneu = rootNode.createChild('pneu')
+
+        pneu.createObject('EulerImplicit', name='odesolver', rayleighStiffness='0.1', rayleighMass='0.1')
+        pneu.createObject('SparseLDLSolver', name='directSolver')
+        #pneu1.createObject('TetrahedronSetTopologyModifier')
+        #pneu1.createObject('TetrahedronSetTopologyAlgorithms', template='Vec3d')
+        #pneu1.createObject('TetrahedronSetGeometryAlgorithms', template='Vec3d')
+
+        #It has to be a file with volumetric mesh
+        #Recommend CGAL/gmsh
+        #More details can be found in tutorial "Mesh generation"
+        pneu.createObject('MeshVTKLoader', name='loader', filename='mesh/Ex30.vtu',translation=[0,0,0], rotation = [0,0,0])
+        pneu.createObject('Mesh', src='@loader', name='container')
+
+        #Specify mesh type, in this example we use tetrahedra
+        pneu.createObject('MechanicalObject', name='tetras', template='Vec3d', showObject='0', showObjectScale='1')
+
+        #Speficy mechanical properties
+        #pneu1.createObject('OgdenForceField', template='Vec3d', mu1='0.2127', mu2='0.0375', mu3='-0.001', alpha1='1.3212', alpha2='4.318', alpha3='-1.0248', d1='1', d2='1', d3='1', PSDStabilization="true" )
+        pneu.createObject('TetrahedronFEMForceField', template='Vec3d', name='FEM', method='large', poissonRatio='0.45',  youngModulus='330.8', drawAsEdges="true")
+        pneu.createObject('UniformMass', totalMass= mass)
+        #pneu1.createObject('UniformMass', totalMass = mass)
+
+        #Define stiff layer
+        pneu.createObject('BoxROI', name='boxROISubTopo1', box='80 -5 -10 85 60 60', drawBoxes='0')
+        modelSubTopo1 = pneu.createChild('modelSubTopo1')
+        modelSubTopo1.createObject('Mesh', position='@loader.position', tetrahedra="@boxROISubTopo1.tetrahedraInROI", name='container')
+        modelSubTopo1.createObject('TetrahedronFEMForceField', template='Vec3d', name='FEM', method='large', poissonRatio='0.3',  youngModulus='1e12')
+
+        pneu.createObject('BoxROI', name='boxROISubTopo2', box='-5 -5 -10 3 60 60', drawBoxes='0')
+        modelSubTopo2 = pneu.createChild('modelSubTopo2')
+        modelSubTopo2.createObject('Mesh', position='@loader.position', tetrahedra="@boxROISubTopo2.tetrahedraInROI", name='container')
+        modelSubTopo2.createObject('TetrahedronFEMForceField', template='Vec3d', name='FEM', method='large', poissonRatio='0.3',  youngModulus='1e12')
+
+        #Define boundry layer
+        pneu.createObject('BoxROI', name='boxROI', box='-5 -5 -10 3 60 60', drawBoxes= '0')
+        pneu.createObject('RestShapeSpringsForceField', points='@boxROI.indices', stiffness='1e12', angularStiffness='1e12')
+        pneu.createObject('LinearSolverConstraintCorrection', solverName='directSolver')
+
+        #Define the cavity inside the chambers
+        cavity = pneu.createChild('cavity')
+
+        cavity.createObject('MeshSTLLoader', name='cavityLoader', filename='mesh/Ex3Cav.STL', translation=[0,0,2.5], rotation = [0,0,0])
+        cavity.createObject('Mesh', src='@cavityLoader', name='cavityMesh')
+        cavity.createObject('MechanicalObject', name='cavity')
+        cavity.createObject('SurfacePressureConstraint', name="SurfacePressureConstraint", listening = 'true', template='Vec3d', value="0", triangles='@cavityMesh.triangles', drawPressure='0',drawScale='0.0002',  valueType="pressure")
+        cavity.createObject('BarycentricMapping', name='mapping', mapForces='false', mapMasses='false')
+
+        constraint = pneu.createChild('Constraint')
+        #constraint.createObject('MechanicalObject', name="points", template="Vec3d", position = '84 10 10 84 49 49', showObject="true", showObjectScale="5")
+        constraint.createObject('MechanicalObject', name="points", template="Vec3d", position = '85 30 30 85 50 30 85 30 50 85 30 10 85 10 30', showObject="false", showObjectScale="0")
+        constraint.createObject('BarycentricMapping')
+
+        collisionpneu1 = pneu.createChild('collisionPneu1')
+        collisionpneu1.createObject('MeshSTLLoader', name='loader', filename='mesh/Ex3.STL', translation=[0,0,0], rotation = [0,0,0])
+        collisionpneu1.createObject('Mesh', src='@loader', name='topo')
+        collisionpneu1.createObject('MechanicalObject', name='collisMech')
+        collisionpneu1.createObject('Triangle', selfCollision="false")
+        collisionpneu1.createObject('Line',selfCollision="false")
+        collisionpneu1.createObject('Point', selfCollision="false")
+        collisionpneu1.createObject('BarycentricMapping')
+        #OPTIONAL: Create a visual model for the actuators
+
+        #modelVisu = pneu1.createChild('visu')
+        #modelVisu.createObject('MeshSTLLoader', name="loader", filename="data/mesh/Ex3.stl")
+        #modelVisu.createObject('OglModel', src="@loader", template='ExtVec3f', color='0.7 0.7 0 0.6',translation=[0,0,0], rotation = [0,0,0])
+        #modelVisu.createObject('BarycentricMapping')
+
+        return rootNode
